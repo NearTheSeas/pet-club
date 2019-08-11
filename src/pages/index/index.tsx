@@ -1,17 +1,9 @@
 import Taro, { Component, Config } from "@tarojs/taro";
 import { View, Picker, Text } from "@tarojs/components";
-import axios from "axios";
-import {
-  AtForm,
-  AtInput,
-  AtIcon,
-  AtModal,
-  AtModalHeader,
-  AtModalContent,
-  AtModalAction,
-  AtButton
-} from "taro-ui";
+import { AtForm, AtInput, AtIcon } from "taro-ui";
 import "./index.less";
+
+import MMap from "../../Components/AMap";
 
 interface IndexState {
   address?: string;
@@ -31,6 +23,9 @@ declare global {
       PlaceSearch;
       event;
       Autocomplete;
+      Marker;
+      LngLat;
+      Geolocation;
     };
   }
 }
@@ -51,6 +46,7 @@ export default class Index extends Component<IndexState, any> {
     super(...arguments);
     this.state = {
       address: "",
+      position: {},
       destination: "伙伴宠物乐园",
       timeSel: "18:30",
       countSelector: [1, 2, 3],
@@ -63,17 +59,12 @@ export default class Index extends Component<IndexState, any> {
     this.setState({
       showModal: true
     });
-    this.initMap();
   }
 
   handleAddressChange(value) {
     this.setState({
       address: value
     });
-  }
-
-  onSubmit(event) {
-    console.log(event);
   }
 
   onTimeChange = e => {
@@ -89,38 +80,36 @@ export default class Index extends Component<IndexState, any> {
     });
   };
 
-  initMap() {
-    const { address } = this.state;
+  // 获取用户定位
+  getLocation() {
+    let that = this;
     let AMap = window.AMap;
-    var map = new AMap.Map(`map-container`, {
-      resizeEnable: true,
-      zoom: 11,
-      center: [116.397428, 39.90923] //默认的地图中心经纬度
-    });
 
-    AMap.plugin(["AMap.Autocomplete", "AMap.PlaceSearch"], function() {
-      let autocomplete = new AMap.Autocomplete({
-        city: "北京", //城市，默认全国
-        input: "address_input" //使用联想输入的input的id（也就是上边那个唯一的id）
+    AMap.plugin(["AMap.Geolocation"], function() {
+      // 定位IMapPropsIMapProps
+      var geolocation = new AMap.Geolocation();
+      geolocation.getCurrentPosition();
+
+      AMap.event.addListener(geolocation, "complete", function(data) {
+        let { formattedAddress, position } = data;
+
+        that.setState({ address: formattedAddress, position });
       });
-
-      let placeSearch = new AMap.PlaceSearch({
-        city: "北京",
-        map: map
-      });
-
-      AMap.event.addListener(autocomplete, "select", function(e) {
-        //TODO 针对选中的poi实现自己的功能
-        // placeSearch.setCity(e.poi.adcode);
-        // placeSearch.search(e.poi.name);
-        console.log(e.poi);
+      AMap.event.addListener(geolocation, "error", function(error) {
+        console.log(error);
       });
     });
   }
 
+  setLocation = ({ address, position }): any => {
+    this.setState({ address, position, showModal: false });
+  };
+
   componentWillMount() {}
 
-  componentDidMount() {}
+  componentDidMount() {
+    this.getLocation();
+  }
 
   componentWillUnmount() {}
 
@@ -131,6 +120,7 @@ export default class Index extends Component<IndexState, any> {
   render() {
     const {
       address,
+      position,
       timeSel,
       selectorChecked,
       countSelector,
@@ -197,17 +187,13 @@ export default class Index extends Component<IndexState, any> {
             <Text>预约用车</Text>
           </a>
         </View>
-        {/* {showModal ? <View id="map-container" /> : null} */}
-        <View id="map-container" /> 
-        {/* <AtModal isOpened={showModal}>
-          <AtModalHeader>标题</AtModalHeader>
-          <AtModalContent>
-          <View id="map-container" />
-          </AtModalContent>
-          <AtModalAction>
-            <AtButton>确定</AtButton>
-          </AtModalAction>
-        </AtModal> */}
+        {showModal ? (
+          <MMap
+            address={address}
+            position={position}
+            setLocation={this.setLocation}
+          />
+        ) : null}
       </View>
     );
   }

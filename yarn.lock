@@ -322,6 +322,11 @@
   resolved "https://registry.yarnpkg.com/@types/webpack-env/-/webpack-env-1.14.0.tgz#8edfc5f8e6eae20eeed3ca0d02974ed4ee5e4efc"
   integrity sha512-Fv+0gYJzE/czLoRKq+gnXWr4yBpPM3tO3C8pDLFwqVKlMICQUq5OsxwwFZYDaVr7+L6mgNDp16iOcJHEz3J5RQ==
 
+"@types/zepto@^1.0.30":
+  version "1.0.30"
+  resolved "https://registry.yarnpkg.com/@types/zepto/-/zepto-1.0.30.tgz#067613ca8c1b61ce464125d3d92df9dba08368d8"
+  integrity sha512-uAW6pKvJJz9xI/j7DTQkVMAcL1upYVs6WOTI34SYDMxkpf9SMczdXodPIJk0fF8C2IJy/o0vk0PmrrlfSmJE9w==
+
 "@typescript-eslint/experimental-utils@1.13.0":
   version "1.13.0"
   resolved "https://registry.yarnpkg.com/@typescript-eslint/experimental-utils/-/experimental-utils-1.13.0.tgz#b08c60d780c0067de2fb44b04b432f540138301e"
