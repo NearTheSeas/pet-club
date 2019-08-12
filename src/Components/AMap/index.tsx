@@ -1,5 +1,6 @@
-import Taro, { Component, Config } from "@tarojs/taro";
+import Taro, { Component } from "@tarojs/taro";
 import { View, Button } from "@tarojs/components";
+import { AtButton } from "taro-ui";
 import "./index.less";
 
 interface AMapState {
@@ -38,7 +39,7 @@ export default class AMapComponent extends Component<IMapProps, AMapState> {
   };
 
   loadMap = () => {
-    const { address, position = { lng: 116, lat: 39 } } = this.props;
+    const { address, position } = this.state;
     let domElm = document.querySelector("#address_input")!;
     domElm.value = address;
     let that = this;
@@ -88,18 +89,33 @@ export default class AMapComponent extends Component<IMapProps, AMapState> {
   };
 
   componentDidMount() {
-    this.loadMap();
+    const { address, position = { lng: 116, lat: 39 } } = this.props;
+    this.setState({ address, position }, function() {
+      this.loadMap();
+    });
   }
 
   render() {
     return (
       <View className="map-wrapper">
-        <View>
-          {/* 返回键 搜索框 确认键 */}
-          <input id="address_input" type="text" autoFocus />
-          <Button size="mini" type="primary" onClick={this.handleConfirm}>
-            确定
-          </Button>
+        <View className="at-row search-wrapper">
+          <View className="at-col at-col-9">
+            <input
+              id="address_input"
+              type="text"
+              autoFocus
+              style={{ width: "100%", height: "100%" }}
+            />
+          </View>
+          <View className="at-col at-col-3">
+            <Button
+              type="primary"
+              style={{ width: "100%", height: "100%" }}
+              onClick={this.handleConfirm}
+            >
+              确定
+            </Button>
+          </View>
         </View>
         {/* 地图 */}
         <View id="map-container" />

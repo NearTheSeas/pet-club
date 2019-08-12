@@ -1,6 +1,16 @@
 import Taro, { Component, Config } from "@tarojs/taro";
-import { View, Picker, Text } from "@tarojs/components";
-import { AtForm, AtInput, AtIcon } from "taro-ui";
+import { View, Picker, Text, Button } from "@tarojs/components";
+import {
+  AtForm,
+  AtInput,
+  AtIcon,
+  AtModal,
+  AtModalHeader,
+  AtModalContent,
+  AtModalAction,
+  AtCountdown
+} from "taro-ui";
+import moment from "moment";
 import "./index.less";
 
 import MMap from "../../Components/AMap";
@@ -11,7 +21,7 @@ interface IndexState {
   timeSel?: string;
   countSelector?: number[];
   selectorChecked?: number;
-  showModal?: boolean;
+  showMapModal?: boolean;
 }
 
 declare global {
@@ -48,37 +58,29 @@ export default class Index extends Component<IndexState, any> {
       address: "",
       position: {},
       destination: "伙伴宠物乐园",
+      daySel: "",
       timeSel: "18:30",
       countSelector: [1, 2, 3],
       selectorChecked: 0,
-      showModal: false
+      showMapModal: false,
+      showTelModal: false,
+      tel: null,
+      clickSend: false,
+      timeCounter: 60
     };
   }
 
-  onInputFocus() {
-    this.setState({
-      showModal: true
-    });
+  componentWillMount() {
+    this.getLocation();
   }
 
-  handleAddressChange(value) {
-    this.setState({
-      address: value
-    });
+  componentDidMount() {
+    let day = moment().format("YYYY-MM-DD");
+    let time = moment()
+      .add(1, "h")
+      .format("HH:mm");
+    this.setState({ daySel: day, timeSel: time });
   }
-
-  onTimeChange = e => {
-    console.log(e.detail);
-    this.setState({
-      timeSel: e.detail.value
-    });
-  };
-
-  onCountChange = e => {
-    this.setState({
-      selectorChecked: e.detail.value
-    });
-  };
 
   // 获取用户定位
   getLocation() {
@@ -101,15 +103,68 @@ export default class Index extends Component<IndexState, any> {
     });
   }
 
-  setLocation = ({ address, position }): any => {
-    this.setState({ address, position, showModal: false });
+  onInputFocus() {
+    this.setState({
+      showMapModal: true
+    });
+  }
+
+  handleAddressChange(value) {
+    this.setState({
+      address: value
+    });
+  }
+
+  handleTelChange = value => {
+    this.setState({
+      tel: value
+    });
   };
 
-  componentWillMount() {}
+  onDayChange = e => {
+    console.log(e.detail);
+    this.setState({
+      daySel: e.detail.value
+    });
+  };
 
-  componentDidMount() {
-    this.getLocation();
-  }
+  onTimeChange = e => {
+    console.log(e.detail);
+    this.setState({
+      timeSel: e.detail.value
+    });
+  };
+
+  onCountChange = e => {
+    this.setState({
+      selectorChecked: e.detail.value
+    });
+  };
+
+  setLocation = ({ address, position }): any => {
+    this.setState({ address, position, showMapModal: false });
+  };
+
+  clickSend = () => {
+    this.setState({ clickSend: true });
+    let Timer = setInterval(() => {
+      let { timeCounter } = this.state;
+      if (timeCounter > 1) {
+        this.setState({ timeCounter: timeCounter - 1 });
+      } else {
+        this.setState({ timeCounter: 60, clickSend: false });
+        clearInterval(Timer);
+      }
+    }, 1000);
+  };
+
+  clickCancel = () => {
+    this.setState({ showTelModal: false });
+  };
+
+  submitSubscribe = () => {
+    this.setState({ showTelModal: true });
+  };
 
   componentWillUnmount() {}
 
@@ -121,10 +176,15 @@ export default class Index extends Component<IndexState, any> {
     const {
       address,
       position,
+      daySel,
       timeSel,
       selectorChecked,
       countSelector,
-      showModal
+      showMapModal,
+      showTelModal,
+      tel,
+      clickSend,
+      timeCounter
     } = this.state;
     return (
       <View className="index-wrapper">
@@ -151,6 +211,19 @@ export default class Index extends Component<IndexState, any> {
               onChange={this.handleAddressChange.bind(this)}
             />
             <Picker
+              mode="date"
+              value={daySel}
+              className="index-select"
+              onChange={this.onDayChange.bind(this)}
+            >
+              <View className="picker">
+                <View className="at-row">
+                  <View className="at-col at-col-4">预约日期</View>
+                  <View className="at-col at-col-8 ">{daySel}</View>
+                </View>
+              </View>
+            </Picker>
+            <Picker
               mode="time"
               value={timeSel}
               className="index-select"
@@ -167,7 +240,7 @@ export default class Index extends Component<IndexState, any> {
               mode="selector"
               value={selectorChecked}
               range={countSelector}
-              className="index-select"
+              className="index-select noborder"
               onChange={this.onCountChange.bind(this)}
             >
               <View className="picker">
@@ -182,18 +255,42 @@ export default class Index extends Component<IndexState, any> {
           </AtForm>
         </View>
         <View className="btn-wrapper at-row at-row__align--center">
-          <a href="" className="index-btn ">
+          <a onClick={this.submitSubscribe} className="index-btn ">
             <AtIcon value="clock" size="30" color="#000" />
             <Text>预约用车</Text>
           </a>
         </View>
-        {showModal ? (
+        {showMapModal ? (
           <MMap
             address={address}
             position={position}
             setLocation={this.setLocation}
           />
         ) : null}
+
+        <AtModal isOpened={showTelModal}>
+          <AtModalHeader>绑定手机号</AtModalHeader>
+          <AtModalContent>
+            <AtInput
+              clear
+              type="phone"
+              name=""
+              placeholder="请输入手机号码"
+              value={tel}
+              onChange={this.handleTelChange}
+            >
+              {clickSend ? (
+                <text>{timeCounter}秒后重试</text>
+              ) : (
+                <text onClick={this.clickSend}>发送验证码</text>
+              )}
+            </AtInput>
+          </AtModalContent>
+          <AtModalAction>
+            <Button onClick={this.clickCancel}>取消</Button>
+            <Button>确定</Button>
+          </AtModalAction>
+        </AtModal>
       </View>
     );
   }
