@@ -1,6 +1,5 @@
 import Taro, { Component } from "@tarojs/taro";
 import { View, Button } from "@tarojs/components";
-import { AtButton } from "taro-ui";
 import "./index.less";
 
 interface AMapState {
@@ -32,10 +31,12 @@ export default class AMapComponent extends Component<IMapProps, AMapState> {
   handleConfirm = e => {
     const { address, position } = this.state;
     const { setLocation } = this.props;
-    setLocation({
-      address,
-      position
-    });
+    if (address) {
+      setLocation({
+        address,
+        position
+      });
+    }
   };
 
   loadMap = () => {
@@ -90,9 +91,11 @@ export default class AMapComponent extends Component<IMapProps, AMapState> {
 
   componentDidMount() {
     const { address, position = { lng: 116, lat: 39 } } = this.props;
-    this.setState({ address, position }, function() {
-      this.loadMap();
-    });
+    console.log(address);
+    if (address) {
+      this.setState({ address, position }, function() {});
+    }
+    this.loadMap();
   }
 
   render() {

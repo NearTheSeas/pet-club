@@ -5,5 +5,12 @@ module.exports = {
   defineConstants: {
   },
   weapp: {},
-  h5: {}
+  h5: {
+    devServer: {
+      proxy: {
+        '/user/*': 'http://www.gopets.cn/',
+        '/order/*': 'http://www.gopets.cn/',
+      }
+    },
+  }
 }

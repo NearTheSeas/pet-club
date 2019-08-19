@@ -8,7 +8,7 @@ import {
   AtModalHeader,
   AtModalContent,
   AtModalAction,
-  AtCountdown
+  AtMessage
 } from "taro-ui";
 import moment from "moment";
 import "./index.less";
@@ -55,6 +55,7 @@ export default class Index extends Component<IndexState, any> {
   constructor() {
     super(...arguments);
     this.state = {
+      user: true,
       address: "",
       position: {},
       destination: "伙伴宠物乐园",
@@ -64,9 +65,11 @@ export default class Index extends Component<IndexState, any> {
       selectorChecked: 0,
       showMapModal: false,
       showTelModal: false,
-      tel: null,
+      tel: 18514789756,
       clickSend: false,
-      timeCounter: 60
+      timeCounter: 60,
+      serverCode: null,
+      inputCode: null
     };
   }
 
@@ -121,6 +124,12 @@ export default class Index extends Component<IndexState, any> {
     });
   };
 
+  handleInputCodeChange = value => {
+    this.setState({
+      inputCode: value
+    });
+  };
+
   onDayChange = e => {
     console.log(e.detail);
     this.setState({
@@ -146,16 +155,67 @@ export default class Index extends Component<IndexState, any> {
   };
 
   clickSend = () => {
-    this.setState({ clickSend: true });
-    let Timer = setInterval(() => {
-      let { timeCounter } = this.state;
-      if (timeCounter > 1) {
-        this.setState({ timeCounter: timeCounter - 1 });
-      } else {
-        this.setState({ timeCounter: 60, clickSend: false });
-        clearInterval(Timer);
-      }
-    }, 1000);
+    const { tel } = this.state;
+    if (tel) {
+      Taro.request({
+        url: "/user/sendCode",
+        data: {
+          tel
+        },
+        header: {
+          "content-type": "application/json"
+        }
+      }).then(({ data: { code, data } }) => {
+        if (code == 200) this.setState({ serverCode: data });
+      });
+
+      this.setState({ clickSend: true });
+      let Timer = setInterval(() => {
+        let { timeCounter } = this.state;
+        if (timeCounter > 1) {
+          this.setState({ timeCounter: timeCounter - 1 });
+        } else {
+          this.setState({ timeCounter: 60, clickSend: false });
+          clearInterval(Timer);
+        }
+      }, 1000);
+    } else {
+      Taro.atMessage({
+        message: "请输入正确的手机号码",
+        type: "error"
+      });
+    }
+  };
+
+  bindMobile = () => {
+    const { inputCode, serverCode, tel } = this.state;
+    if (inputCode && inputCode == serverCode) {
+      Taro.request({
+        url: "/user/mobileLogin",
+        data: {
+          tel,
+          code: inputCode
+        },
+        header: {
+          "content-type": "application/json"
+        }
+      }).then(({ data: { code, msg } }) => {
+        if (code == 200) {
+          this.setState({ showTelModal: false, user: true });
+        } else {
+          Taro.atMessage({
+            message: msg,
+            type: "error"
+          });
+          return null;
+        }
+      });
+    } else {
+      Taro.atMessage({
+        message: "验证码错误",
+        type: "error"
+      });
+    }
   };
 
   clickCancel = () => {
@@ -163,7 +223,45 @@ export default class Index extends Component<IndexState, any> {
   };
 
   submitSubscribe = () => {
-    this.setState({ showTelModal: true });
+    const {
+      user,
+      address,
+      daySel,
+      timeSel,
+      tel,
+      countSelector,
+      selectorChecked
+    } = this.state;
+    if (!user) {
+      this.setState({ showTelModal: true });
+    }
+
+    Taro.request({
+      url: "/order",
+      method: "POST",
+      data: {
+        address,
+        mobile: tel,
+        appointment: daySel + " " + timeSel,
+        num: countSelector[selectorChecked]
+      },
+      header: {
+        "content-type": "application/json"
+      }
+    }).then(({ data: { code, msg } }) => {
+      if (code == 200) {
+        Taro.atMessage({
+          message: msg,
+          type: "success"
+        });
+      } else {
+        Taro.atMessage({
+          message: msg,
+          type: "error"
+        });
+        return null;
+      }
+    });
   };
 
   componentWillUnmount() {}
@@ -184,7 +282,8 @@ export default class Index extends Component<IndexState, any> {
       showTelModal,
       tel,
       clickSend,
-      timeCounter
+      timeCounter,
+      inputCode
     } = this.state;
     return (
       <View className="index-wrapper">
@@ -278,6 +377,14 @@ export default class Index extends Component<IndexState, any> {
               placeholder="请输入手机号码"
               value={tel}
               onChange={this.handleTelChange}
+            />
+            <AtInput
+              clear
+              type="code"
+              name=""
+              placeholder="验证码"
+              value={inputCode}
+              onChange={this.handleInputCodeChange}
             >
               {clickSend ? (
                 <text>{timeCounter}秒后重试</text>
@@ -288,9 +395,10 @@ export default class Index extends Component<IndexState, any> {
           </AtModalContent>
           <AtModalAction>
             <Button onClick={this.clickCancel}>取消</Button>
-            <Button>确定</Button>
+            <Button onClick={this.bindMobile}>确定</Button>
           </AtModalAction>
         </AtModal>
+        <AtMessage />
       </View>
     );
   }
