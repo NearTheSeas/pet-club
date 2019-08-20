@@ -55,17 +55,17 @@ export default class Index extends Component<IndexState, any> {
   constructor() {
     super(...arguments);
     this.state = {
-      user: true,
+      user: null,
       address: "",
       position: {},
       destination: "伙伴宠物乐园",
       daySel: "",
       timeSel: "18:30",
-      countSelector: [1, 2, 3],
+      countSelector: [1, 2, 3, 4, 5],
       selectorChecked: 0,
       showMapModal: false,
       showTelModal: false,
-      tel: 18514789756,
+      mobile: null,
       clickSend: false,
       timeCounter: 60,
       serverCode: null,
@@ -83,6 +83,15 @@ export default class Index extends Component<IndexState, any> {
       .add(1, "h")
       .format("HH:mm");
     this.setState({ daySel: day, timeSel: time });
+
+    Taro.request({
+      url: "/user/me",
+      header: {
+        "content-type": "application/json"
+      }
+    }).then(({ data: { code, data } }) => {
+      if (code == 200) this.setState({ user: data });
+    });
   }
 
   // 获取用户定位
@@ -120,7 +129,7 @@ export default class Index extends Component<IndexState, any> {
 
   handleTelChange = value => {
     this.setState({
-      tel: value
+      mobile: value
     });
   };
 
@@ -155,12 +164,12 @@ export default class Index extends Component<IndexState, any> {
   };
 
   clickSend = () => {
-    const { tel } = this.state;
-    if (tel) {
+    const { mobile } = this.state;
+    if (mobile) {
       Taro.request({
         url: "/user/sendCode",
         data: {
-          tel
+          mobile
         },
         header: {
           "content-type": "application/json"
@@ -188,20 +197,31 @@ export default class Index extends Component<IndexState, any> {
   };
 
   bindMobile = () => {
-    const { inputCode, serverCode, tel } = this.state;
+    const { inputCode, serverCode, mobile, user } = this.state;
     if (inputCode && inputCode == serverCode) {
       Taro.request({
         url: "/user/mobileLogin",
         data: {
-          tel,
-          code: inputCode
+          mobile,
+          code: inputCode,
+          openId: user.openId
         },
         header: {
           "content-type": "application/json"
         }
-      }).then(({ data: { code, msg } }) => {
+      }).then(({ data: { code, msg, data } }) => {
+        console.log(code);
+        console.log(data);
         if (code == 200) {
-          this.setState({ showTelModal: false, user: true });
+          this.setState(
+            {
+              showTelModal: false,
+              user: { ...data }
+            },
+            () => {
+              this.submitSubscribe();
+            }
+          );
         } else {
           Taro.atMessage({
             message: msg,
@@ -225,23 +245,36 @@ export default class Index extends Component<IndexState, any> {
   submitSubscribe = () => {
     const {
       user,
+      position,
       address,
       daySel,
       timeSel,
-      tel,
+      mobile,
       countSelector,
       selectorChecked
     } = this.state;
-    if (!user) {
+    if (!this.state.user.mobile) {
       this.setState({ showTelModal: true });
+      return null;
+    }
+
+    if (!position.lat) {
+      Taro.atMessage({
+        message: "没有获取到您的位置",
+        type: "error"
+      });
+      return null;
     }
 
     Taro.request({
       url: "/order",
-      method: "POST",
+      method: "PUT",
       data: {
+        lat: position.lat,
+        lon: position.lng,
+        openId: user.openId,
         address,
-        mobile: tel,
+        mobile,
         appointment: daySel + " " + timeSel,
         num: countSelector[selectorChecked]
       },
@@ -280,7 +313,7 @@ export default class Index extends Component<IndexState, any> {
       countSelector,
       showMapModal,
       showTelModal,
-      tel,
+      mobile,
       clickSend,
       timeCounter,
       inputCode
@@ -375,7 +408,7 @@ export default class Index extends Component<IndexState, any> {
               type="phone"
               name=""
               placeholder="请输入手机号码"
-              value={tel}
+              value={mobile}
               onChange={this.handleTelChange}
             />
             <AtInput
